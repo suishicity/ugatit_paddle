@@ -1,0 +1,26 @@
+data_dir: ""
+use_gpu: true
+phase: "train"
+light: False
+
+lr: 0.0001
+weight_decay: 0.0001
+batch_size: 1
+iterations: 1000000
+decay_step: 500000
+print_freq: 1000
+save_freq: 100000
+
+gan_mode: "lsgan"
+lambda_adv: 1
+lambda_cyc: 10
+lambda_idt: 10
+lambda_cam: 1000
+
+base_width: 64
+n_res: 4
+n_dis: 6
+img_size: 256
+img_ch: 3
+
+output: "output"
