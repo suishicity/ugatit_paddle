@@ -269,9 +269,8 @@ class Discriminator(nn.Layer):
 
 
 class GANLoss(fluid.dygraph.Layer):
-    def __init__(self, gan_mode, smooth=0.0):
+    def __init__(self, gan_mode):
         super().__init__()
-        self.smooth = smooth
         self.gan_mode = gan_mode
         if gan_mode == 'lsgan':
             self.loss = fluid.dygraph.MSELoss()

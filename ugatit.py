@@ -19,6 +19,7 @@ class UGATIT(DefaultTrainer):
         self.L1_loss = nn.L1Loss()
         self.MSE_loss = nn.MSELoss()
         self.BCE_loss = nn.BCELoss()
+        self.Vanilla_loss = GANLoss('vanilla')
 
         self.lambda_adv = cfg.lambda_adv
         self.lambda_cyc = cfg.lambda_cyc
@@ -116,3 +117,49 @@ class UGATIT(DefaultTrainer):
         G_ad_cam_loss_GB = self.GAN_loss(fake_GB_cam_logit, True)
         G_ad_loss_LB = self.GAN_loss(fake_LB_logit, True)
         G_ad_cam_loss_LB = self.GAN_loss(fake_LB_cam_logit, True)
+
+        G_recon_loss_A = self.L1_loss(fake_A2B2A, real_A)
+        G_recon_loss_B = self.L1_loss(fake_B2A2B, real_B)
+
+        G_idt_loss_A = self.L1_loss(fake_A2A, real_A)
+        G_idt_loss_B = self.L1_loss(fake_B2B, real_B)
+
+        G_cam_loss_A = self.Vanilla_loss(fake_B2A_cam_logit, True) + self.Vanilla_loss(fake_A2A_cam_logit, False)
+        G_cam_loss_B = self.Vanilla_loss(fake_A2B_cam_logit, True) + self.Vanilla_loss(fake_B2B_cam_logit, False)
+
+        G_loss_A = self.lambda_adv * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + \
+                   self.lambda_cyc * G_recon_loss_A + self.lambda_idt * G_idt_loss_A + self.lambda_cam * G_cam_loss_A
+        G_loss_B = self.lambda_adv * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + \
+                    self.lambda_cyc * G_recon_loss_B + self.lambda_idt * G_idt_loss_B +  self.lambda_cam * G_cam_loss_B
+
+        G_loss = G_loss_A + G_loss_B
+        G_loss.backward()
+        self.optimizerG.minimize(G_loss)
+
+        clip_rho(self.genAB)
+        clip_rho(self.genBA)
+
+        losses = {
+            "G_loss": G_loss.numpy(),
+            "D_loss": D_loss.numpy(),
+        }
+
+        return losses
+
+    @fluid.dygraph.no_grad()
+    def sample_images(self, inputs):
+        self.genAB.eval()
+        self.genBA.eval()
+
+        real_A = to_variable(np.asarray(inputs['A'], dtype='float32'))
+        real_B = to_variable(np.asarray(inputs['A'], dtype='float32'))
+
+        fake_A2B, _, fake_A2B_heatmap = self.genAB(real_A)
+        fake_B2A, _, fake_B2A_heatmap = self.genBA(real_B)
+
+        fake_A2B2A, _, fake_A2B2A_heatmap = self.genBA(fake_A2B)
+        fake_B2A2B, _, fake_B2A2B_heatmap = self.genAB(fake_B2A)
+
+        
+
+
