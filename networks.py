@@ -305,3 +305,4 @@ def clip_rho(net, vmin=0, vmax=1):
     for name, param in net.named_parameters():
         if 'rho' in name:
             param.set_value(fluid.layers.clip(param, vmin, vmax))
+

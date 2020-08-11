@@ -9,6 +9,7 @@ import numpy as np
 from trainer import DefaultTrainer
 from networks import ResnetGenerator, Discriminator, GANLoss, clip_rho
 from scheduler import LinearScheduler
+from utils import make_grid, denormalize, gen_cam
 
 
 class UGATIT(DefaultTrainer):
@@ -147,12 +148,15 @@ class UGATIT(DefaultTrainer):
         return losses
 
     @fluid.dygraph.no_grad()
-    def sample_images(self, inputs):
+    def sample_images(self, epoch, inputs):
         self.genAB.eval()
         self.genBA.eval()
 
+        img_A = np.asarray(inputs['A'])
+        img_B = np.asarray(inputs['B'])
+
         real_A = to_variable(np.asarray(inputs['A'], dtype='float32'))
-        real_B = to_variable(np.asarray(inputs['A'], dtype='float32'))
+        real_B = to_variable(np.asarray(inputs['B'], dtype='float32'))
 
         fake_A2B, _, fake_A2B_heatmap = self.genAB(real_A)
         fake_B2A, _, fake_B2A_heatmap = self.genBA(real_B)
@@ -160,6 +164,21 @@ class UGATIT(DefaultTrainer):
         fake_A2B2A, _, fake_A2B2A_heatmap = self.genBA(fake_A2B)
         fake_B2A2B, _, fake_B2A2B_heatmap = self.genAB(fake_B2A)
 
-        
+        img_A = denormalize(img_A[0], transpose=True)
+        fake_A2B = denormalize(fake_A2B[0].numpy(), transpose=True)
+        fake_A2B_heatmap = gen_cam(fake_A2B_heatmap[0].numpy())
+        fake_A2B2A = denormalize(fake_A2B2A[0].numpy(), transpose=True)
+        fake_A2B2A_heatmap = gen_cam(fake_A2B2A_heatmap[0].numpy())
 
+        img_B = denormalize(img_B[0], transpose=True)
+        fake_B2A = denormalize(fake_B2A[0].numpy(), transpose=True)
+        fake_B2A_heatmap = gen_cam(fake_B2A_heatmap[0].numpy())
+        fake_B2A2B = denormalize(fake_B2A2B[0].numpy(), transpose=True)
+        fake_B2A2B_heatmap = gen_cam(fake_B2A2B_heatmap[0].numpy())        
 
+        grid = make_grid([
+            img_A, fake_A2B_heatmap, fake_A2B, fake_A2B2A_heatmap, fake_A2B2A,
+            img_B, fake_B2A_heatmap, fake_B2A, fake_B2A2B_heatmap, fake_B2A2B 
+        ], ncol=5, pad_value=255)
+        grid = cv2.cvtColor(grid, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join(self.output_image_dir, '{}.png'.format(epoch)), grid)
