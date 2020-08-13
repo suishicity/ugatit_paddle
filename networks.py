@@ -6,6 +6,9 @@ from paddle.fluid.initializer import ConstantInitializer, NormalInitializer
 from basenet import (conv_norm, ReLU, LeakyReLU, ReflectionPad2D, Upsample, 
     SpectralNormConv2D, SpectralNormLinear)
 
+param_attr = fluid.ParamAttr(initializer=NormalInitializer(0, 0.02))
+
+
 
 class ResnetGenerator(nn.Layer):
     def __init__(self, input_nc, output_nc, ngf=64, n_blocks=6, img_size=256, light=False):
@@ -19,7 +22,7 @@ class ResnetGenerator(nn.Layer):
 
         down_blocks = [nn.Sequential(
             ReflectionPad2D(3),
-            nn.Conv2D(input_nc, ngf, 7, 1, 0,  bias_attr=False),
+            nn.Conv2D(input_nc, ngf, 7, 1, 0,  bias_attr=False, param_attr=param_attr),
             nn.InstanceNorm(ngf), 
             ReLU()
         )]
@@ -29,7 +32,7 @@ class ResnetGenerator(nn.Layer):
             mult = 2**i 
             down_blocks.append(nn.Sequential(
                 ReflectionPad2D(1),
-                nn.Conv2D(ngf * mult, ngf * mult * 2, 3, 2, bias_attr=False),
+                nn.Conv2D(ngf * mult, ngf * mult * 2, 3, 2, bias_attr=False, param_attr=param_attr),
                 nn.InstanceNorm(ngf * mult * 2),
                 ReLU()
             ))
@@ -38,24 +41,24 @@ class ResnetGenerator(nn.Layer):
         for i in range(n_blocks):
             down_blocks.append(ResnetBlock(ngf * mult, bias=False))
 
-        self.gap_fc = nn.Linear(ngf * mult, 1, bias_attr=False)
-        self.gmp_fc = nn.Linear(ngf * mult, 1, bias_attr=False)
+        self.gap_fc = nn.Linear(ngf * mult, 1, bias_attr=False, param_attr=param_attr)
+        self.gmp_fc = nn.Linear(ngf * mult, 1, bias_attr=False, param_attr=param_attr)
         self.conv1x1 = nn.Conv2D(ngf * mult * 2, ngf * mult, 1, 1)
         self.relu = ReLU()
 
         if self.light:
             self.FC= nn.Sequential(
-                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu'),
-                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu'),
+                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
+                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
             )
         else:
             self.FC = nn.Sequential(
-                nn.Linear((img_size // mult)**2 * ngf * mult, ngf * mult, bias_attr=False, act='relu'),
+                nn.Linear((img_size // mult)**2 * ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
                 nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu'),
             )
 
-        self.gamma = nn.Linear(ngf * mult, ngf * mult, bias_attr=False)
-        self.beta = nn.Linear(ngf * mult, ngf * mult, bias_attr=False)
+        self.gamma = nn.Linear(ngf * mult, ngf * mult, bias_attr=False, param_attr=param_attr)
+        self.beta = nn.Linear(ngf * mult, ngf * mult, bias_attr=False, param_attr=param_attr)
 
         self.UpBlock1 = nn.LayerList()
         for i in range(n_blocks):
@@ -67,7 +70,7 @@ class ResnetGenerator(nn.Layer):
             up_blocks += [
                 Upsample(scale=2),
                 ReflectionPad2D(1),
-                nn.Conv2D(ngf * mult, ngf * mult // 2, 3, 1, 0, bias_attr=False),
+                nn.Conv2D(ngf * mult, ngf * mult // 2, 3, 1, 0, bias_attr=False, param_attr=param_attr),
                 ILN(ngf * mult // 2),
                 ReLU(),
             ]
@@ -102,7 +105,7 @@ class ResnetGenerator(nn.Layer):
         heatmap = fluid.layers.reduce_sum(x, dim=1, keep_dim=True)
 
         if self.light:
-            x_ = self.avg_pool(x, 1)
+            x_ = self.avg_pool(x)
             x_ = self.FC(fluid.layers.reshape(x_, (x.shape[0], -1)))
         else:
             x_ = self.FC(fluid.layers.reshape(x, (x.shape[0], -1)))
@@ -140,12 +143,12 @@ class ResnetAdaILNBlock(nn.Layer):
     def __init__(self, dim, bias=None):
         super().__init__()
         self.pad1 = ReflectionPad2D(1)
-        self.conv1 = nn.Conv2D(dim, dim, 3, 1, 0, bias_attr=bias)
+        self.conv1 = nn.Conv2D(dim, dim, 3, 1, 0, bias_attr=bias, param_attr=param_attr)
         self.norm1 = AdaILN(dim)
         self.relu = ReLU()
 
         self.pad2 = ReflectionPad2D(1)
-        self.conv2 =nn.Conv2D(dim, dim, 3, 1, 0, bias_attr=bias)
+        self.conv2 =nn.Conv2D(dim, dim, 3, 1, 0, bias_attr=bias, param_attr=param_attr)
         self.norm2 = AdaILN(dim)
 
     def forward(self, x, gamma, beta):
@@ -271,32 +274,29 @@ class Discriminator(nn.Layer):
 class GANLoss(fluid.dygraph.Layer):
     def __init__(self, gan_mode):
         super().__init__()
+        assert gan_mode in ['lsgan', 'vanilla', 'wgangp', 'hinge']
         self.gan_mode = gan_mode
-        if gan_mode == 'lsgan':
-            self.loss = fluid.dygraph.MSELoss()
-        elif gan_mode == 'vanilla':
-            self.loss = fluid.dygraph.BCELoss()
-        elif gan_mode in ['wgangp']:
-            self.loss = None
-        else:
-            raise NotImplementedError('gan mode %s not implemented' % gan_mode)
 
-    def get_target_tensor(self, prediction, target_is_real):
-        if target_is_real:
-            return fluid.layers.ones_like(prediction)
+    def forward(self, fake, real=None):
+        if real is None:
+            if self.gan_mode == 'lsgan':
+                loss = fluid.layers.mean(fluid.layers.square(fake - 1))
+            elif self.gan_mode == 'vanilla':
+                loss = - fluid.layers.mean(fluid.layers.log(fluid.layers.sigmoid(fake)))
+            elif self.gan_mode == 'wgangp' or self.gan_mode == 'hinge':
+                loss = - fluid.layers.mean(fake)
         else:
-            return fluid.layers.zeros_like(prediction)
-
-    def forward(self, prediction, target_is_real):
-        if self.gan_mode == 'lsgan':
-            target = self.get_target_tensor(prediction, target_is_real)
-            loss = self.loss(prediction, target)
-        elif self.gan_mode == 'vanilla':
-            target = self.get_target_tensor(prediction, target_is_real)
-            prediction = fluid.layers.sigmoid(prediction)
-            loss = self.loss(prediction, target)
-        elif self.gan_mode == 'wgangp':
-            loss = -fluid.layers.mean(prediction) if target_is_real else fluid.layers.mean(prediction)
+            if self.gan_mode == 'lsgan':
+                loss = fluid.layers.mean(fluid.layers.square(real - 1)) \
+                     + fluid.layers.mean(fluid.layers.square(fake))
+            elif self.gan_mode == 'vanilla':
+                loss = - fluid.layers.mean(fluid.layers.log(fluid.layers.sigmoid(real))) \
+                     - fluid.layers.mean(fluid.layers.log(1 - fluid.layers.sigmoid(fake)))
+            elif self.gan_mode == 'wgangp':
+                loss = -fluid.layers.mean(real) + fluid.layers.mean(fake)
+            elif self.gan_mode == 'hinge':
+                loss = fluid.layers.mean(fluid.layers.relu(1 - real)) \
+                     + fluid.layers.mean(fluid.layers.relu(1 + fake))
 
         return loss
 

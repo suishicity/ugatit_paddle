@@ -1,5 +1,6 @@
 import os
 import yaml
+import cv2
 import paddle
 import paddle.fluid as fluid
 from paddle.fluid.dygraph import nn
@@ -42,10 +43,10 @@ class UGATIT(DefaultTrainer):
         netD_param = self.disGA.parameters() + self.disGB.parameters() + \
                      self.disLA.parameters() + self.disLB.parameters()
 
-        self.optimizerG = fluid.optimizer.Adam(schedulerG, 0.5, 0.999, parameter_list=netG_param, 
+        self.optimizerG = fluid.optimizer.Adam(schedulerG, 0.5, 0.999, parameter_list=netG_param,
                             regularization=fluid.regularizer.L2Decay(cfg.weight_decay)) 
         self.optimizerD = fluid.optimizer.Adam(schedulerD, 0.5, 0.999, parameter_list=netD_param,
-                            regularization=fluid.regularizer.L2Decay(cfg.weight_decay)) 
+                            regularization=fluid.regularizer.L2Decay(cfg.weight_decay))
 
         self.model_dict = {
             'genAB': self.genAB,
@@ -77,14 +78,23 @@ class UGATIT(DefaultTrainer):
         fake_GB_logit, fake_GB_cam_logit, _ = self.disGB(fake_A2B)
         fake_LB_logit, fake_LB_cam_logit, _ = self.disLB(fake_A2B)
 
-        D_ad_loss_GA = self.GAN_loss(real_GA_logit, True) + self.GAN_loss(fake_GA_logit, False)
-        D_ad_cam_loss_GA = self.GAN_loss(real_GA_cam_logit, True) + self.GAN_loss(fake_GA_cam_logit, False)
-        D_ad_loss_LA = self.GAN_loss(real_LA_logit, True) + self.GAN_loss(fake_LA_logit, False)
-        D_ad_cam_loss_LA = self.GAN_loss(real_LA_cam_logit, True) + self.GAN_loss(fake_LA_cam_logit, False)
-        D_ad_loss_GB = self.GAN_loss(real_GB_logit, True) + self.GAN_loss(fake_GB_logit, False)
-        D_ad_cam_loss_GB = self.GAN_loss(real_GB_cam_logit, True) + self.GAN_loss(fake_GB_cam_logit, False)
-        D_ad_loss_LB = self.GAN_loss(real_LB_logit, True) + self.GAN_loss(fake_LB_logit, False)
-        D_ad_cam_loss_LB = self.GAN_loss(real_LB_cam_logit, True) + self.GAN_loss(fake_LB_cam_logit, False)
+        D_ad_loss_GA = self.GAN_loss(fake_GA_logit, real_GA_logit)
+        D_ad_cam_loss_GA = self.GAN_loss(fake_GA_cam_logit, real_GA_cam_logit)
+        D_ad_loss_LA = self.GAN_loss(fake_LA_logit, real_LA_logit)
+        D_ad_cam_loss_LA = self.GAN_loss(fake_LA_cam_logit, real_LA_cam_logit)
+        D_ad_loss_GB = self.GAN_loss(fake_GB_logit, real_GB_logit)
+        D_ad_cam_loss_GB = self.GAN_loss(fake_GB_cam_logit, real_GB_cam_logit)
+        D_ad_loss_LB = self.GAN_loss(fake_LB_logit, real_LB_logit)
+        D_ad_cam_loss_LB = self.GAN_loss(fake_LB_cam_logit, real_LB_cam_logit)
+
+        # D_ad_loss_GA = self.GAN_loss(real_GA_logit, True) + self.GAN_loss(fake_GA_logit, False)
+        # D_ad_cam_loss_GA = self.GAN_loss(real_GA_cam_logit, True) + self.GAN_loss(fake_GA_cam_logit, False)
+        # D_ad_loss_LA = self.GAN_loss(real_LA_logit, True) + self.GAN_loss(fake_LA_logit, False)
+        # D_ad_cam_loss_LA = self.GAN_loss(real_LA_cam_logit, True) + self.GAN_loss(fake_LA_cam_logit, False)
+        # D_ad_loss_GB = self.GAN_loss(real_GB_logit, True) + self.GAN_loss(fake_GB_logit, False)
+        # D_ad_cam_loss_GB = self.GAN_loss(real_GB_cam_logit, True) + self.GAN_loss(fake_GB_cam_logit, False)
+        # D_ad_loss_LB = self.GAN_loss(real_LB_logit, True) + self.GAN_loss(fake_LB_logit, False)
+        # D_ad_cam_loss_LB = self.GAN_loss(real_LB_cam_logit, True) + self.GAN_loss(fake_LB_cam_logit, False)
 
         D_loss_A = self.lambda_adv * (D_ad_loss_GA + D_ad_cam_loss_GA + D_ad_loss_LA + D_ad_cam_loss_LA)
         D_loss_B = self.lambda_adv * (D_ad_loss_GB + D_ad_cam_loss_GB + D_ad_loss_LB + D_ad_cam_loss_LB)
@@ -110,14 +120,14 @@ class UGATIT(DefaultTrainer):
         fake_GB_logit, fake_GB_cam_logit, _ = self.disGB(fake_A2B)
         fake_LB_logit, fake_LB_cam_logit, _ = self.disLB(fake_A2B)       
 
-        G_ad_loss_GA = self.GAN_loss(fake_GA_logit, True)
-        G_ad_cam_loss_GA = self.GAN_loss(fake_GA_cam_logit, True)
-        G_ad_loss_LA = self.GAN_loss(fake_LA_logit, True)
-        G_ad_cam_loss_LA = self.GAN_loss(fake_LA_cam_logit, True)
-        G_ad_loss_GB = self.GAN_loss(fake_GB_logit, True)
-        G_ad_cam_loss_GB = self.GAN_loss(fake_GB_cam_logit, True)
-        G_ad_loss_LB = self.GAN_loss(fake_LB_logit, True)
-        G_ad_cam_loss_LB = self.GAN_loss(fake_LB_cam_logit, True)
+        G_ad_loss_GA = self.GAN_loss(fake_GA_logit)
+        G_ad_cam_loss_GA = self.GAN_loss(fake_GA_cam_logit)
+        G_ad_loss_LA = self.GAN_loss(fake_LA_logit)
+        G_ad_cam_loss_LA = self.GAN_loss(fake_LA_cam_logit)
+        G_ad_loss_GB = self.GAN_loss(fake_GB_logit)
+        G_ad_cam_loss_GB = self.GAN_loss(fake_GB_cam_logit)
+        G_ad_loss_LB = self.GAN_loss(fake_LB_logit)
+        G_ad_cam_loss_LB = self.GAN_loss(fake_LB_cam_logit)
 
         G_recon_loss_A = self.L1_loss(fake_A2B2A, real_A)
         G_recon_loss_B = self.L1_loss(fake_B2A2B, real_B)
@@ -125,8 +135,11 @@ class UGATIT(DefaultTrainer):
         G_idt_loss_A = self.L1_loss(fake_A2A, real_A)
         G_idt_loss_B = self.L1_loss(fake_B2B, real_B)
 
-        G_cam_loss_A = self.Vanilla_loss(fake_B2A_cam_logit, True) + self.Vanilla_loss(fake_A2A_cam_logit, False)
-        G_cam_loss_B = self.Vanilla_loss(fake_A2B_cam_logit, True) + self.Vanilla_loss(fake_B2B_cam_logit, False)
+        G_cam_loss_A = self.Vanilla_loss(fake_B2A_cam_logit, fake_A2A_cam_logit)
+        G_cam_loss_B = self.Vanilla_loss(fake_A2B_cam_logit, fake_B2B_cam_logit)
+
+        # G_cam_loss_A = self.Vanilla_loss(fake_B2A_cam_logit, True) + self.Vanilla_loss(fake_A2A_cam_logit, False)
+        # G_cam_loss_B = self.Vanilla_loss(fake_A2B_cam_logit, True) + self.Vanilla_loss(fake_B2B_cam_logit, False)
 
         G_loss_A = self.lambda_adv * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + \
                    self.lambda_cyc * G_recon_loss_A + self.lambda_idt * G_idt_loss_A + self.lambda_cam * G_cam_loss_A
@@ -143,6 +156,11 @@ class UGATIT(DefaultTrainer):
         losses = {
             "G_loss": G_loss.numpy(),
             "D_loss": D_loss.numpy(),
+            "G_ad_loss_GA": G_ad_loss_GA.numpy(),
+            "G_ad_loss_GB": G_ad_loss_GB.numpy(),
+            "G_ad_loss_GA": G_ad_loss_GA.numpy(),
+            "G_ad_loss_GB": G_ad_loss_GB.numpy(),
+            "lr": self.optimizerG.current_step_lr(),
         }
 
         return losses
@@ -166,15 +184,15 @@ class UGATIT(DefaultTrainer):
 
         img_A = denormalize(img_A[0], transpose=True)
         fake_A2B = denormalize(fake_A2B[0].numpy(), transpose=True)
-        fake_A2B_heatmap = gen_cam(fake_A2B_heatmap[0].numpy())
+        fake_A2B_heatmap = gen_cam(fake_A2B_heatmap[0][0].numpy())
         fake_A2B2A = denormalize(fake_A2B2A[0].numpy(), transpose=True)
-        fake_A2B2A_heatmap = gen_cam(fake_A2B2A_heatmap[0].numpy())
+        fake_A2B2A_heatmap = gen_cam(fake_A2B2A_heatmap[0][0].numpy())
 
         img_B = denormalize(img_B[0], transpose=True)
         fake_B2A = denormalize(fake_B2A[0].numpy(), transpose=True)
-        fake_B2A_heatmap = gen_cam(fake_B2A_heatmap[0].numpy())
+        fake_B2A_heatmap = gen_cam(fake_B2A_heatmap[0][0].numpy())
         fake_B2A2B = denormalize(fake_B2A2B[0].numpy(), transpose=True)
-        fake_B2A2B_heatmap = gen_cam(fake_B2A2B_heatmap[0].numpy())        
+        fake_B2A2B_heatmap = gen_cam(fake_B2A2B_heatmap[0][0].numpy())        
 
         grid = make_grid([
             img_A, fake_A2B_heatmap, fake_A2B, fake_A2B2A_heatmap, fake_A2B2A,

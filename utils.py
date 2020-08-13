@@ -30,7 +30,7 @@ def image_transform(mode='train', img_size=(256, 256)):
                 w = np.random.randint(0, 30)
                 img = np.ascontiguousarray(img[h: h + img_size[0], w: w + img_size[1]])
             if np.random.uniform() < 0.5:
-                img = cv2.flip(img, 1)
+                img = cv2.flip(img, np.random.randint(-1, 2))
 
         img = cv2.resize(img, (img_size[1], img_size[0]), interpolation=cv2.INTER_LINEAR)
         img = normalize(img)

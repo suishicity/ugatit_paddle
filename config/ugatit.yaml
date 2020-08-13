@@ -1,15 +1,17 @@
-data_dir: ""
+data_dir: "F:/Data/selfi2anime"
+output_dir: "output"
 use_gpu: true
 phase: "train"
-light: False
+light: true
 
 lr: 0.0001
 weight_decay: 0.0001
 batch_size: 1
 iterations: 1000000
 decay_step: 500000
-print_freq: 1000
+sample_freq: 1000
 save_freq: 100000
+log_freq: 10
 
 gan_mode: "lsgan"
 lambda_adv: 1
@@ -23,4 +25,3 @@ n_dis: 6
 img_size: 256
 img_ch: 3
 
-output: "output"

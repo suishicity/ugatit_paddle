@@ -21,12 +21,12 @@ class ImageFolder:
         return img
     
     def load_image(self, img_path):
-        img = cv2.imwrite(img_path, 1)
+        img = cv2.imread(img_path, 1)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img
     
     def reader(self):
-        for i in len(self.files):
+        for i in range(len(self.files)):
             yield self.__getitem__(i)
 
 
