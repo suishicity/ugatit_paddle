@@ -65,8 +65,7 @@ class SpectralNormConv2D(nn.Conv2D):
                     if self._groups else 1, 'use_cudnn', self._use_cudnn)
 
         weight = fluid.layers.spectral_norm(self.weight, dim=1)
-        out = fluid.dygraph.core.ops.conv2d(input, weight, *attrs)
-        pre_bias = out
+        pre_bias = fluid.dygraph.core.ops.conv2d(input, weight, *attrs)
         pre_act = fluid.dygraph_utils._append_bias_in_dygraph(pre_bias, self.bias, 1)
         return fluid.dygraph_utils._append_activation_in_dygraph(pre_act, self._act)
 

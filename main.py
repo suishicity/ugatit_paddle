@@ -68,8 +68,9 @@ def main():
 
     trainer.sample_images(start, {'A': next(testA_iter), 'B': next(testB_iter)})
     start_time = time.time()
+    writer = LogWriter(cfg.output_dir)
     
-    for iteration in range(0, cfg.iterations+1):
+    for iteration in range(start, cfg.iterations+1):
         try: 
             imgA, imgB = next(trainA_iter), next(trainB_iter)
         except:
@@ -78,13 +79,22 @@ def main():
             imgA, imgB = next(trainA_iter), next(trainB_iter)
         
         losses = trainer.step({'A': imgA, 'B': imgB})
-        time_left = (time.time() - start_time()) / (iteration - start + 1) * (cfg.iterations - iteration + 1)
-        screen_print(losses, iteration, cfg.iteraionts, time_left)
+        time_left = (time.time() - start_time) / (iteration - start + 1) * (cfg.iterations - iteration + 1)
+        screen_print(losses, iteration, cfg.iterations, time_left)
 
         for k, v in losses.items():
             hist[k] += v
         if iteration % cfg.log_freq == 0:
-           pass 
+            for k, v in hist.items():
+                writer.add_scalar('train/' + k, v/cfg.log_freq, iteration)
+        
+        if iteration % cfg.sample_freq == 0:
+            trainer.sample_images(start, {'A': next(testA_iter), 'B': next(testB_iter)}) 
+        if iteration % cfg.snap_freq == 0:
+            trainer.save_last_checkpoints(iteration)
+        if iteration % cfg.save_freq == 0:
+            trainer.save_checkpoints(iteration)
+
 
 
 if __name__ == "__main__":
