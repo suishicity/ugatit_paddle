@@ -45,10 +45,10 @@ def main():
 
     cfg = parse_args()
 
-    trainA = ImageFolder(osp.join(cfg.data_dir, 'trainA'), transform=image_transform(mode='train'))
-    trainB = ImageFolder(osp.join(cfg.data_dir, 'trainB'), transform=image_transform(mode='train'))
-    testA = ImageFolder(osp.join(cfg.data_dir, 'testA'), transform=image_transform(mode='test'))
-    testB = ImageFolder(osp.join(cfg.data_dir, 'testB'), transform=image_transform(mode='test'))
+    trainA = ImageFolder(osp.join(cfg.data_dir, 'trainA'), transform=image_transform(mode='train', img_size=cfg.img_size))
+    trainB = ImageFolder(osp.join(cfg.data_dir, 'trainB'), transform=image_transform(mode='train', img_size=cfg.img_size))
+    testA = ImageFolder(osp.join(cfg.data_dir, 'testA'), transform=image_transform(mode='test', img_size=cfg.img_size))
+    testB = ImageFolder(osp.join(cfg.data_dir, 'testB'), transform=image_transform(mode='test', img_size=cfg.img_size))
 
     trainA_loader = fluid.io.batch(fluid.io.shuffle(trainA.reader, 500), batch_size=cfg.batch_size, drop_last=True)
     trainB_loader = fluid.io.batch(fluid.io.shuffle(trainB.reader, 500), batch_size=cfg.batch_size, drop_last=True)
@@ -67,15 +67,15 @@ def main():
     hist = collections.defaultdict(lambda : 0)
 
     trainer.sample_images(start, {'A': next(testA_iter), 'B': next(testB_iter)})
-    start_time = time.time()
     writer = LogWriter(cfg.output_dir)
     
+    start_time = time.time()
     for iteration in range(start, cfg.iterations+1):
         try: 
             imgA, imgB = next(trainA_iter), next(trainB_iter)
         except:
-            trainA_iter = iter(trainA_loader)
-            trainB_iter = iter(trainB_loader)
+            trainA_iter = iter(trainA_loader())
+            trainB_iter = iter(trainB_loader())
             imgA, imgB = next(trainA_iter), next(trainB_iter)
         
         losses = trainer.step({'A': imgA, 'B': imgB})

@@ -172,6 +172,7 @@ class UGATIT(DefaultTrainer):
 
         img_A = np.asarray(inputs['A'])
         img_B = np.asarray(inputs['B'])
+        img_size = img_A.shape[-2:]
 
         real_A = to_variable(np.asarray(inputs['A'], dtype='float32'))
         real_B = to_variable(np.asarray(inputs['B'], dtype='float32'))
@@ -184,15 +185,15 @@ class UGATIT(DefaultTrainer):
 
         img_A = denormalize(img_A[0], transpose=True)
         fake_A2B = denormalize(fake_A2B[0].numpy(), transpose=True)
-        fake_A2B_heatmap = gen_cam(fake_A2B_heatmap[0][0].numpy())
+        fake_A2B_heatmap = gen_cam(fake_A2B_heatmap[0][0].numpy(), img_size)
         fake_A2B2A = denormalize(fake_A2B2A[0].numpy(), transpose=True)
-        fake_A2B2A_heatmap = gen_cam(fake_A2B2A_heatmap[0][0].numpy())
+        fake_A2B2A_heatmap = gen_cam(fake_A2B2A_heatmap[0][0].numpy(), img_size)
 
         img_B = denormalize(img_B[0], transpose=True)
         fake_B2A = denormalize(fake_B2A[0].numpy(), transpose=True)
-        fake_B2A_heatmap = gen_cam(fake_B2A_heatmap[0][0].numpy())
+        fake_B2A_heatmap = gen_cam(fake_B2A_heatmap[0][0].numpy(), img_size)
         fake_B2A2B = denormalize(fake_B2A2B[0].numpy(), transpose=True)
-        fake_B2A2B_heatmap = gen_cam(fake_B2A2B_heatmap[0][0].numpy())        
+        fake_B2A2B_heatmap = gen_cam(fake_B2A2B_heatmap[0][0].numpy(), img_size)        
 
         grid = make_grid([
             img_A, fake_A2B_heatmap, fake_A2B, fake_A2B2A_heatmap, fake_A2B2A,

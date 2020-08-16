@@ -20,13 +20,13 @@ lambda_cyc: 10
 lambda_idt: 10
 lambda_cam: 1000
 
-base_width: 64
-n_res: 4
-n_dis: 6
-img_size: 256
+# base_width: 64
+# n_res: 4
+# n_dis: 6
+# img_size: 256
 img_ch: 3
 
-# base_width: 16
-# n_res: 1
-# n_dis: 6
-# img_size: 128
+base_width: 16
+n_res: 1
+n_dis: 6
+img_size: [128, 128]

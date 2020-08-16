@@ -64,5 +64,5 @@ class DefaultTrainer:
         with open(os.path.join(self.ckpt_dir, 'last_checkpoint'), 'r') as f:
             begin = int(f.readline()) + 1
         for optimizer in self.optimizers:
-            optimizer.set_begin(begin)
+            optimizer._learning_rate.set_begin(begin)
         return  begin

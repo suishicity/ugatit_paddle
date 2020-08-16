@@ -6,8 +6,8 @@ from paddle.fluid.initializer import ConstantInitializer, NormalInitializer
 from basenet import (conv_norm, ReLU, LeakyReLU, ReflectionPad2D, Upsample, 
     SpectralNormConv2D, SpectralNormLinear)
 
-param_attr = fluid.ParamAttr(initializer=NormalInitializer(0, 0.02))
-
+# param_attr = fluid.ParamAttr(initializer=NormalInitializer(0, 0.02))
+param_attr = None
 
 
 class ResnetGenerator(nn.Layer):
@@ -17,8 +17,10 @@ class ResnetGenerator(nn.Layer):
         self.output_nc = output_nc
         self.ngf = ngf
         self.n_blocks = n_blocks
-        self.img_size = img_size
         self.light = light
+        if isinstance(img_size, int):
+            img_size = [img_size, img_size]
+        self.img_size = img_size
 
         down_blocks = [nn.Sequential(
             ReflectionPad2D(3),
@@ -41,24 +43,24 @@ class ResnetGenerator(nn.Layer):
         for i in range(n_blocks):
             down_blocks.append(ResnetBlock(ngf * mult, bias=False))
 
-        self.gap_fc = nn.Linear(ngf * mult, 1, bias_attr=False, param_attr=param_attr)
-        self.gmp_fc = nn.Linear(ngf * mult, 1, bias_attr=False, param_attr=param_attr)
+        self.gap_fc = nn.Linear(ngf * mult, 1, bias_attr=False)
+        self.gmp_fc = nn.Linear(ngf * mult, 1, bias_attr=False)
         self.conv1x1 = nn.Conv2D(ngf * mult * 2, ngf * mult, 1, 1)
         self.relu = ReLU()
 
         if self.light:
             self.FC= nn.Sequential(
-                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
-                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
+                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu'),
+                nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu'),
             )
         else:
             self.FC = nn.Sequential(
-                nn.Linear((img_size // mult)**2 * ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
+                nn.Linear((img_size[0] // mult) * (img_size[1] // mult) * ngf * mult, ngf * mult, bias_attr=False, act='relu', param_attr=param_attr),
                 nn.Linear(ngf * mult, ngf * mult, bias_attr=False, act='relu'),
             )
 
-        self.gamma = nn.Linear(ngf * mult, ngf * mult, bias_attr=False, param_attr=param_attr)
-        self.beta = nn.Linear(ngf * mult, ngf * mult, bias_attr=False, param_attr=param_attr)
+        self.gamma = nn.Linear(ngf * mult, ngf * mult, bias_attr=False)
+        self.beta = nn.Linear(ngf * mult, ngf * mult, bias_attr=False)
 
         self.UpBlock1 = nn.LayerList()
         for i in range(n_blocks):
@@ -193,8 +195,8 @@ class ILN(nn.Layer):
         size = (1, num_features, 1, 1)
         self.eps = eps
         self.rho = self.create_parameter(size, dtype='float32', default_initializer=ConstantInitializer(0.0))
-        self.gamma =self.create_parameter(size, dtype='float32', default_initializer=ConstantInitializer(1.0)) 
-        self.beta =self.create_parameter(size, dtype='float32', default_initializer=ConstantInitializer(1.0)) 
+        self.gamma = self.create_parameter(size, dtype='float32', default_initializer=ConstantInitializer(1.0)) 
+        self.beta = self.create_parameter(size, dtype='float32', default_initializer=ConstantInitializer(0.0)) 
 
     def normalize(self, x, dim):
         x_mean = fluid.layers.reduce_mean(x, dim, keep_dim=True)
