@@ -11,7 +11,7 @@ param_attr = None
 
 
 class ResnetGenerator(nn.Layer):
-    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=6, img_size=256, light=False):
+    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=4, img_size=256, light=False):
         super().__init__()
         self.input_nc = input_nc
         self.output_nc = output_nc
