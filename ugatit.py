@@ -60,7 +60,7 @@ class UGATIT(DefaultTrainer):
 
     def step(self, inputs):
         real_A = to_variable(np.asarray(inputs['A'], dtype='float32'))
-        real_B = to_variable(np.asarray(inputs['A'], dtype='float32'))
+        real_B = to_variable(np.asarray(inputs['B'], dtype='float32'))
 
         # update D
         self.optimizerD.clear_gradients()
@@ -158,8 +158,6 @@ class UGATIT(DefaultTrainer):
             "D_loss": D_loss.numpy(),
             "G_ad_loss_GA": G_ad_loss_GA.numpy(),
             "G_ad_loss_GB": G_ad_loss_GB.numpy(),
-            "G_ad_loss_GA": G_ad_loss_GA.numpy(),
-            "G_ad_loss_GB": G_ad_loss_GB.numpy(),
             "lr": self.optimizerG.current_step_lr(),
         }
 
@@ -201,3 +199,6 @@ class UGATIT(DefaultTrainer):
         ], ncol=5, pad_value=255)
         grid = cv2.cvtColor(grid, cv2.COLOR_RGB2BGR)
         cv2.imwrite(os.path.join(self.output_image_dir, '{}.png'.format(epoch)), grid)
+        
+        self.genAB.train()
+        self.genBA.train() 

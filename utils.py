@@ -60,7 +60,7 @@ def make_grid(imgs, ncol=-1, padding=1, pad_value=0):
 
 def gen_cam(x, out_size=(256, 256), out_format='RGB'):
     cam = (x - x.min()) / (x.max() - x.min())
-    cam = (x * 255).astype('uint8')
+    cam = (cam * 255).astype('uint8')
     cam = cv2.resize(cam, out_size, interpolation=cv2.INTER_LINEAR)
     cam = cv2.applyColorMap(cam, cv2.COLORMAP_JET)
     if out_format == 'RGB':

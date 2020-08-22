@@ -87,9 +87,10 @@ def main():
         if iteration % cfg.log_freq == 0:
             for k, v in hist.items():
                 writer.add_scalar('train/' + k, v/cfg.log_freq, iteration)
+            hist.clear()
         
         if iteration % cfg.sample_freq == 0:
-            trainer.sample_images(start, {'A': next(testA_iter), 'B': next(testB_iter)}) 
+            trainer.sample_images(iteration, {'A': next(testA_iter), 'B': next(testB_iter)}) 
         if iteration % cfg.snap_freq == 0:
             trainer.save_last_checkpoints(iteration)
         if iteration % cfg.save_freq == 0:
