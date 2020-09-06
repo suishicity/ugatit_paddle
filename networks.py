@@ -265,8 +265,8 @@ class Discriminator(nn.Layer):
         gmp = x * gmp_weight
 
         cam_logit = fluid.layers.concat([gap_logits, gmp_logits], 1)
-        # x = fluid.layers.concat([gap, gmp], 1)
-        # x = self.leaky_relu(self.conv1x1(x))
+        x = fluid.layers.concat([gap, gmp], 1)
+        x = self.leaky_relu(self.conv1x1(x))
 
         heatmap = fluid.layers.reduce_sum(x, dim=1, keep_dim=True)
         x = self.pad(x)
