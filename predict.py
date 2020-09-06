@@ -16,7 +16,8 @@ def parse_args():
     parser.add_argument("--input", type=str, required=True, help="input file path or input diretory of images")
     parser.add_argument("--output", type=str, default="output", help="path to save the result")
     # parser.add_argument("--direction", type=str, default='AtoB', help="translate direction of image domain")
-    parser.add_argument("--light", action='store_true', help="Whether to use light model")
+    parser.add_argument("--light", action='store_true', help="whether to use light model")
+    parser.add_argument("--use_gpu", type=int, default=1, help="whether to use gpu")
 
     args = parser.parse_args()
     os.makedirs(args.output, exist_ok=True)
@@ -31,10 +32,9 @@ def main():
         files = glob.glob(os.path.join(args.input, '*'))
         files.sort()
     img_size = (256, 256)
-    # weight_name = 'genAB' if args.direction == 'AtoB' else "genBA"
-    # weight_path = os.path.join(args.weight_path, weight_name)
     weight_path = args.weight_path
 
+    place = fluid.CUDAPlace() if args.use_gpu else fluid.CPUPlace()
     fluid.dygraph.enable_dygraph()
     net = ResnetGenerator(3, 3, ngf=64, n_blocks=4, img_size=img_size, light=args.light)
     net.load_dict(fluid.load_dygraph(weight_path)[0])
