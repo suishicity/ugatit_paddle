@@ -1,0 +1,4 @@
+paddlepaddle-gpu==1.8.3.post107
+easydict
+PyYAML
+opencv-python
