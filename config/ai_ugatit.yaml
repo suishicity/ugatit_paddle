@@ -1,0 +1,27 @@
+data_dir: "/home/aistudio/data/selfi2anime"
+output_dir: "output"
+use_gpu: true
+phase: "train"
+light: false
+
+lr: 6.0e-5
+weight_decay: 0.0001
+batch_size: 1
+iterations: 400000
+decay_step: 200000
+sample_freq: 500
+snap_freq: 1000
+save_freq: 50000
+log_freq: 10
+
+gan_mode: "lsgan"
+lambda_adv: 1
+lambda_cyc: 10
+lambda_idt: 10
+lambda_cam: 1000
+
+base_width: 64
+n_res: 4
+n_dis: 6
+img_size: [256, 256]
+img_ch: 3

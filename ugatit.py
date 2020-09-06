@@ -87,15 +87,6 @@ class UGATIT(DefaultTrainer):
         D_ad_loss_LB = self.GAN_loss(fake_LB_logit, real_LB_logit)
         D_ad_cam_loss_LB = self.GAN_loss(fake_LB_cam_logit, real_LB_cam_logit)
 
-        # D_ad_loss_GA = self.GAN_loss(real_GA_logit, True) + self.GAN_loss(fake_GA_logit, False)
-        # D_ad_cam_loss_GA = self.GAN_loss(real_GA_cam_logit, True) + self.GAN_loss(fake_GA_cam_logit, False)
-        # D_ad_loss_LA = self.GAN_loss(real_LA_logit, True) + self.GAN_loss(fake_LA_logit, False)
-        # D_ad_cam_loss_LA = self.GAN_loss(real_LA_cam_logit, True) + self.GAN_loss(fake_LA_cam_logit, False)
-        # D_ad_loss_GB = self.GAN_loss(real_GB_logit, True) + self.GAN_loss(fake_GB_logit, False)
-        # D_ad_cam_loss_GB = self.GAN_loss(real_GB_cam_logit, True) + self.GAN_loss(fake_GB_cam_logit, False)
-        # D_ad_loss_LB = self.GAN_loss(real_LB_logit, True) + self.GAN_loss(fake_LB_logit, False)
-        # D_ad_cam_loss_LB = self.GAN_loss(real_LB_cam_logit, True) + self.GAN_loss(fake_LB_cam_logit, False)
-
         D_loss_A = self.lambda_adv * (D_ad_loss_GA + D_ad_cam_loss_GA + D_ad_loss_LA + D_ad_cam_loss_LA)
         D_loss_B = self.lambda_adv * (D_ad_loss_GB + D_ad_cam_loss_GB + D_ad_loss_LB + D_ad_cam_loss_LB)
 
@@ -137,9 +128,6 @@ class UGATIT(DefaultTrainer):
 
         G_cam_loss_A = self.Vanilla_loss(fake_B2A_cam_logit, fake_A2A_cam_logit)
         G_cam_loss_B = self.Vanilla_loss(fake_A2B_cam_logit, fake_B2B_cam_logit)
-
-        # G_cam_loss_A = self.Vanilla_loss(fake_B2A_cam_logit, True) + self.Vanilla_loss(fake_A2A_cam_logit, False)
-        # G_cam_loss_B = self.Vanilla_loss(fake_A2B_cam_logit, True) + self.Vanilla_loss(fake_B2B_cam_logit, False)
 
         G_loss_A = self.lambda_adv * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + \
                    self.lambda_cyc * G_recon_loss_A + self.lambda_idt * G_idt_loss_A + self.lambda_cam * G_cam_loss_A
